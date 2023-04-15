@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/exhaustive-deps */
 import { Play } from 'phosphor-react'
 import {
   CountdownContainer,
@@ -46,14 +47,19 @@ export function Home() {
   })
 
   const activeCycle = cycles.find((cycle) => cycle.id === activeCycleId)
+  let interval: number
 
   useEffect(() => {
     if (activeCycle) {
-      setInterval(() => {
+      interval = setInterval(() => {
         setAmountSecondsPassed(
           differenceInSeconds(new Date(), activeCycle.startDate),
         )
       }, 1000)
+    }
+
+    return () => {
+      clearInterval(interval)
     }
   }, [activeCycle])
 
@@ -69,8 +75,6 @@ export function Home() {
   const isSubmitDisabled = !task
 
   function handleCreateNewCycle(data: NewCycleFormData) {
-    // console.log(data)
-
     const newCycle: Cycle = {
       id: String(new Date().getTime()),
       task: data.task,
@@ -79,11 +83,11 @@ export function Home() {
     }
     setCycle((state) => [...state, newCycle])
     setActiveCycleId(newCycle.id)
+    setAmountSecondsPassed(0)
 
     reset()
   }
 
-  console.log(activeCycle)
   return (
     <HomeContainer>
       <form onSubmit={handleSubmit(handleCreateNewCycle)} action="">
