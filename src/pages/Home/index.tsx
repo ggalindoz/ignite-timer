@@ -32,6 +32,8 @@ interface Cycle {
   task: string
   minutesAmount: number
   startDate: Date
+  interruptedDate?: Date
+  finishedDate?: Date
 }
 
 export function Home() {
@@ -48,23 +50,39 @@ export function Home() {
   })
 
   const activeCycle = cycles.find((cycle) => cycle.id === activeCycleId)
-  let interval: number
 
+  let interval: number
+  const totalSeconds = activeCycle ? activeCycle.minutesAmount * 60 : 0
   useEffect(() => {
     if (activeCycle) {
       interval = setInterval(() => {
-        setAmountSecondsPassed(
-          differenceInSeconds(new Date(), activeCycle.startDate),
+        const secondsDifference = differenceInSeconds(
+          new Date(),
+          activeCycle.startDate,
         )
+        if (secondsDifference > totalSeconds) {
+          setCycle((state) =>
+            state.map((cycle) => {
+              if (cycle.id === activeCycleId) {
+                return { ...cycle, finishedDate: new Date() }
+              } else {
+                return cycle
+              }
+            }),
+          )
+
+          clearInterval(interval)
+        } else {
+          setAmountSecondsPassed(secondsDifference)
+        }
       }, 1000)
     }
 
     return () => {
       clearInterval(interval)
     }
-  }, [activeCycle])
+  }, [activeCycle, totalSeconds, setActiveCycleId])
 
-  const totalSeconds = activeCycle ? activeCycle.minutesAmount * 60 : 0
   const currentSeconds = activeCycle ? totalSeconds - amountSecondsPassed : 0
   const minutesAmountLeft = Math.floor(currentSeconds / 60)
   const secondsAmountLeft = currentSeconds % 60
@@ -78,8 +96,10 @@ export function Home() {
   useEffect(() => {
     if (activeCycle) {
       document.title = `${minutesToScreen}:${secondsToScreen}`
+    } else {
+      document.title = 'Timer Project'
     }
-  }, [minutesToScreen, secondsToScreen])
+  }, [minutesToScreen, secondsToScreen, activeCycle])
 
   function handleCreateNewCycle(data: NewCycleFormData) {
     const newCycle: Cycle = {
@@ -96,6 +116,15 @@ export function Home() {
   }
 
   function handleInterruptedCycle() {
+    setCycle((state) =>
+      state.map((cycle) => {
+        if (cycle.id === activeCycleId) {
+          return { ...cycle, interruptedDate: new Date() }
+        } else {
+          return cycle
+        }
+      }),
+    )
     setActiveCycleId(null)
   }
 
@@ -107,6 +136,7 @@ export function Home() {
           <TaskInput
             id="task"
             placeholder="Dê um nome para o seu projeto"
+            disabled={!!activeCycle}
             {...register('task')}
           ></TaskInput>
           <label htmlFor="minutesAmount">durante</label>
@@ -114,10 +144,11 @@ export function Home() {
             id="minutesAmount"
             type="number"
             placeholder="00"
+            disabled={!!activeCycle}
             {...register('minutesAmount', { valueAsNumber: true })}
             step={1}
             max={60}
-            min={5}
+            min={1}
           ></MinutesAmountInput>
           <span>minutos.</span>
         </FormContainer>
